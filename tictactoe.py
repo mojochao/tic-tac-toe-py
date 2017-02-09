@@ -43,18 +43,20 @@ class Game(object):
         self._board = Board(dim)
         self._next_player = None
         self._winner = None
+
         # define win patterns for board
         self._win_patterns = []
         length = dim ** 2
-        # add horizontal patterns
+        #   add horizontal patterns
         for row_idx in range(0, length, dim):
             self._win_patterns.append(range(row_idx, row_idx + dim))
-        # add vertical patterns
+        #   add vertical patterns
         for col_idx in range(0, dim):
             self._win_patterns.append(range(col_idx, length, dim))
-        # add diagonal patterns
+        #   add diagonal patterns
         self._win_patterns.append(range(0, length, dim + 1))
         self._win_patterns.append(range(dim - 1, length - dim + 1, dim - 1))
+
         # define event handlers to be set by callers after construction
         self.on_player1_turn = None
         self.on_player2_turn = None
