@@ -3,13 +3,6 @@ from __future__ import print_function
 import random
 
 
-def contains_only(seq, val):
-    for item in seq:
-        if item != val:
-            return False
-    return True
-
-
 class Board(object):
 
     EMPTY_CELL = '.'
@@ -19,8 +12,12 @@ class Board(object):
         self.cells = list(Board.EMPTY_CELL * (dim ** 2))
 
     def __str__(self):
-        rows = [''.join(self.cells[i:i + self.dim]) for i in range(0, len(self.cells), self.dim)]
+        rows = [''.join(self.cells[idx:idx + self.dim]) for idx in range(0, len(self.cells), self.dim)]
         return '\n'.join(rows) + '\n'
+
+    @property
+    def available_cells(self):
+        return [idx for idx in range(len(self.cells)) if self.cells[idx] == Board.EMPTY_CELL]
 
     def is_empty(self):
         return len(self.available_cells) == len(self.cells)
@@ -28,89 +25,85 @@ class Board(object):
     def is_full(self):
         return len(self.available_cells) == 0
 
-    @property
-    def available_cells(self):
-        return [i for i in range(len(self.cells)) if self.cells[i] == Board.EMPTY_CELL]
+    def is_cell_available(self, idx):
+        return self.cells[idx] == Board.EMPTY_CELL
 
-    def is_cell_available(self, i):
-        return self.cells[i] == Board.EMPTY_CELL
+    def get_cell(self, idx):
+        return self.cells[idx]
 
-    def get_cell(self, i):
-        return self.cells[i]
-
-    def set_cell(self, i, val):
-        self.cells[i] = val
-
-    @property
-    def win_patterns(self):
-        lines = []
-        length = self.dim ** 2
-        # add horizontals
-        for row_idx in range(0, length, self.dim):
-            lines.append(range(row_idx, row_idx + self.dim))
-        # add verticals
-        for col_idx in range(0, self.dim):
-            lines.append(range(col_idx, length, self.dim))
-        # add diagonals
-        lines.append(range(0, length, self.dim + 1))
-        lines.append(range(self.dim - 1, length - self.dim + 1, self.dim - 1))
-        # return result
-        return lines
+    def set_cell(self, idx, val):
+        self.cells[idx] = val
 
 
 class Game(object):
 
     def __init__(self, player1_token, player2_token, dim):
-        self.player1_token = player1_token
-        self.player2_token = player2_token
-        self.board = Board(dim)
-        self.next_player = None
-        self.winner = None
+        self._player1_token = player1_token
+        self._player2_token = player2_token
+        self._board = Board(dim)
+        self._next_player = None
+        self._winner = None
+        # define win patterns for board
+        self._win_patterns = []
+        length = dim ** 2
+        # add horizontal patterns
+        for row_idx in range(0, length, dim):
+            self._win_patterns.append(range(row_idx, row_idx + dim))
+        # add vertical patterns
+        for col_idx in range(0, dim):
+            self._win_patterns.append(range(col_idx, length, dim))
+        # add diagonal patterns
+        self._win_patterns.append(range(0, length, dim + 1))
+        self._win_patterns.append(range(dim - 1, length - dim + 1, dim - 1))
+        # define event handlers to be set by callers after construction
         self.on_player1_turn = None
         self.on_player2_turn = None
         self.on_game_update = None
         self.on_game_over = None
 
     def start(self):
-        self.next_player = 1
+        # verify event handlers set
+        if self.on_player1_turn is None:
+            raise RuntimeError('game needs an on_player1_turn event handler')
+        if self.on_player2_turn is None:
+            raise RuntimeError('game needs an on_player2_turn event handler')
+        if self.on_game_update is None:
+            raise RuntimeError('game needs an on_game_update event handler')
+        if self.on_game_over is None:
+            raise RuntimeError('game needs an on_game_over event handler')
+        # run game loop
+        self._next_player = 1
         while not self._is_game_over():
             self._next_turn()
-            self.on_game_update(self.board)
-        self.on_game_over(self.winner)
+            self.on_game_update(self._board)
+        self.on_game_over(self._winner)
 
     def play_player1_turn(self, cell):
-        self._play_turn(cell, self.player1_token)
+        self._board.set_cell(cell, self._player1_token)
 
     def play_player2_turn(self, cell):
-        self._play_turn(cell, self.player2_token)
+        self._board.set_cell(cell, self._player2_token)
 
     def _check_winner(self):
-        for pattern in self.board.win_patterns:
-            line = map(lambda i: self.board.cells[i], pattern)
-            if contains_only(line, self.player1_token):
-                return self.player1_token
-            if contains_only(line, self.player2_token):
-                return self.player2_token
+        for pattern in self._win_patterns:
+            items = map(lambda i: self._board.cells[i], pattern)
+            if all(item == self._player1_token for item in items):
+                return self._player1_token
+            if all(item == self._player2_token for item in items):
+                return self._player2_token
         return None
 
     def _is_game_over(self):
-        self.winner = self._check_winner()
-        return self.winner is not None or self.board.is_full()
+        self._winner = self._check_winner()
+        return self._winner is not None or self._board.is_full()
 
     def _next_turn(self):
-        if self.next_player == 1:
-            self.on_player1_turn(self.board.available_cells)
-            self.next_player = 2
+        if self._next_player == 1:
+            self.on_player1_turn(self._board.available_cells)
+            self._next_player = 2
         else:
-            self.on_player2_turn(self.board.available_cells)
-            self.next_player = 1
-
-    def _play_turn(self, cell, token):
-        if self.next_player is None:
-            raise RuntimeError('game not started')
-        if not self.board.is_cell_available(cell):
-            raise RuntimeError('cell {} not available'.format(cell))
-        self.board.set_cell(cell, token)
+            self.on_player2_turn(self._board.available_cells)
+            self._next_player = 1
 
 
 if __name__ == '__main__':
