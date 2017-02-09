@@ -10,10 +10,6 @@ def contains_only(seq, val):
     return True
 
 
-def random_item(seq):
-    return seq[random.randint(0, len(seq) - 1)]
-
-
 class Board(object):
 
     EMPTY_CELL = '.'
@@ -119,8 +115,8 @@ class Game(object):
 
 if __name__ == '__main__':
     game = Game('x', 'o', 3)
-    game.on_player1_turn = lambda available: game.play_player1_turn(random_item(available))
-    game.on_player2_turn = lambda available: game.play_player2_turn(random_item(available))
+    game.on_player1_turn = lambda available: game.play_player1_turn(random.choice(available))
+    game.on_player2_turn = lambda available: game.play_player2_turn(random.choice(available))
     game.on_game_update = lambda board: print(board)
     game.on_game_over = lambda winner: print('{} wins'.format(winner) if winner else 'draw')
     game.start()
