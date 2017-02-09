@@ -8,31 +8,31 @@ class Board(object):
     EMPTY_CELL = '.'
 
     def __init__(self, dim):
-        self.dim = dim
-        self.cells = list(Board.EMPTY_CELL * (dim ** 2))
+        self._dim = dim
+        self._cells = list(Board.EMPTY_CELL * (dim ** 2))
 
     def __str__(self):
-        rows = [''.join(self.cells[idx:idx + self.dim]) for idx in range(0, len(self.cells), self.dim)]
+        rows = [''.join(self._cells[idx:idx + self._dim]) for idx in range(0, len(self._cells), self._dim)]
         return '\n'.join(rows) + '\n'
 
     @property
     def available_cells(self):
-        return [idx for idx in range(len(self.cells)) if self.cells[idx] == Board.EMPTY_CELL]
+        return [idx for idx in range(len(self._cells)) if self._cells[idx] == Board.EMPTY_CELL]
 
     def is_empty(self):
-        return len(self.available_cells) == len(self.cells)
+        return len(self.available_cells) == len(self._cells)
 
     def is_full(self):
         return len(self.available_cells) == 0
 
-    def is_cell_available(self, idx):
-        return self.cells[idx] == Board.EMPTY_CELL
+    def is_cell_empty(self, idx):
+        return self._cells[idx] == Board.EMPTY_CELL
 
     def get_cell(self, idx):
-        return self.cells[idx]
+        return self._cells[idx]
 
     def set_cell(self, idx, val):
-        self.cells[idx] = val
+        self._cells[idx] = val
 
 
 class Game(object):
@@ -64,7 +64,10 @@ class Game(object):
         self.on_game_over = None
 
     def start(self):
-        # verify event handlers set
+        # ensure we're not already started
+        if self._next_player is not None:
+            raise RuntimeError('game already started')
+        # ensure event handlers are set
         if self.on_player1_turn is None:
             raise RuntimeError('game needs an on_player1_turn event handler')
         if self.on_player2_turn is None:
@@ -73,6 +76,7 @@ class Game(object):
             raise RuntimeError('game needs an on_game_update event handler')
         if self.on_game_over is None:
             raise RuntimeError('game needs an on_game_over event handler')
+
         # run game loop
         self._next_player = 1
         while not self._is_game_over():
@@ -81,14 +85,18 @@ class Game(object):
         self.on_game_over(self._winner)
 
     def play_player1_turn(self, cell):
+        if self._next_player is None:
+            raise RuntimeError('game needs to be started first')
         self._board.set_cell(cell, self._player1_token)
 
     def play_player2_turn(self, cell):
+        if self._next_player is None:
+            raise RuntimeError('game needs to be started first')
         self._board.set_cell(cell, self._player2_token)
 
     def _check_winner(self):
         for pattern in self._win_patterns:
-            items = map(lambda i: self._board.cells[i], pattern)
+            items = map(lambda i: self._board.get_cell(i), pattern)
             if all(item == self._player1_token for item in items):
                 return self._player1_token
             if all(item == self._player2_token for item in items):
