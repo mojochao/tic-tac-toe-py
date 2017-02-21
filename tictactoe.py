@@ -96,7 +96,7 @@ class Game(object):
 
     def _check_winner(self):
         for pattern in self._win_patterns:
-            items = map(lambda i: self._board.get_cell(i), pattern)
+            items = [self._board.get_cell(i) for i in pattern]
             if all(item == self._player1_token for item in items): return self._player1_token
             if all(item == self._player2_token for item in items): return self._player2_token
         return None
